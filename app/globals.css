@@ -1,0 +1,245 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #0b0d12;
+  --panel: #131720;
+  --panel-2: #1a2030;
+  --border: #232a3b;
+  --text: #e6e8ee;
+  --muted: #8b93a7;
+  --accent: #4f8cff;
+  --accent-2: #00d4a3;
+  --danger: #ff5876;
+  --warn: #ffb454;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+.container {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 24px clamp(16px, 3vw, 32px);
+}
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+.nav .brand {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-size: 18px;
+}
+.nav .links {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  transition: transform 80ms ease, background 120ms ease;
+}
+.btn:hover {
+  background: #222a3d;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: white;
+}
+.btn-primary:hover {
+  background: #3a78ee;
+}
+.btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border-color: rgba(255, 88, 118, 0.35);
+}
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  outline: none;
+}
+.input:focus,
+.textarea:focus,
+.select:focus {
+  border-color: var(--accent);
+}
+.textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.row {
+  display: grid;
+  gap: 14px;
+}
+.row.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 600px) {
+  .row.two {
+    grid-template-columns: 1fr;
+  }
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.badge.ok {
+  background: rgba(0, 212, 163, 0.12);
+  color: var(--accent-2);
+}
+.badge.soon {
+  background: rgba(255, 180, 84, 0.12);
+  color: var(--warn);
+}
+.badge.urgent,
+.badge.overdue {
+  background: rgba(255, 88, 118, 0.14);
+  color: var(--danger);
+}
+.badge.settled {
+  background: rgba(139, 147, 167, 0.14);
+  color: var(--muted);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--danger);
+  background: rgba(255, 88, 118, 0.1);
+  border: 1px solid rgba(255, 88, 118, 0.3);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.banner {
+  background: linear-gradient(135deg, rgba(79, 140, 255, 0.12), rgba(0, 212, 163, 0.08));
+  border: 1px solid rgba(79, 140, 255, 0.25);
+  padding: 14px 18px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+table.vendors {
+  width: 100%;
+  border-collapse: collapse;
+}
+table.vendors th,
+table.vendors td {
+  text-align: left;
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+table.vendors th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-weight: 600;
+}
+table.vendors tr:last-child td {
+  border-bottom: none;
+}
+table.vendors tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}

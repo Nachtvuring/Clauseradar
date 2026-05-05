@@ -1,0 +1,29 @@
+node_modules
+.next
+out
+
+# logs
+*.log
+*.err
+.dev.log
+.dev.err
+
+# secrets and local data
+.env
+.env*.local
+keyfile
+keyfile.pub
+*.pem
+*.key
+id_rsa
+id_ed25519
+data/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# local helper scripts
+.setup.sh
+.run-dev.sh
