@@ -24,6 +24,5 @@ data/
 .vscode/
 .idea/
 
-# local helper scripts
-.setup.sh
-.run-dev.sh
+# local helper scripts (any dotfile shell script)
+.*.sh
