@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { readDb, writeDb, newId } from "@/lib/db";
-import { annotate } from "@/lib/vendors";
+import { supabaseAdmin } from "@/lib/supabase";
+import { annotate, type Vendor } from "@/lib/vendors";
 import { sendReminderEmail } from "@/lib/email";
 
 // Hit this from any external scheduler (Vercel Cron, GitHub Actions, cron-job.org).
-// Authorize with a shared secret in CRON_SECRET so the world can't spam your inbox.
 //   curl -H "Authorization: Bearer $CRON_SECRET" https://yourapp/api/cron/reminders
+//
+// Requires SUPABASE_SERVICE_ROLE_KEY in env so this can read all vendors across users.
 
 function kindFor(daysUntilNotice: number): "60d" | "30d" | "7d" | "overdue" | null {
   if (daysUntilNotice < 0) return "overdue";
@@ -24,42 +25,53 @@ export async function GET(request: Request) {
     }
   }
 
-  const db = readDb();
-  const sentToday: string[] = [];
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json(
+      { error: "SUPABASE_SERVICE_ROLE_KEY not set" },
+      { status: 500 },
+    );
+  }
+
+  const sb = supabaseAdmin();
   const todayKey = new Date().toISOString().slice(0, 10);
 
-  for (const v of db.vendors) {
-    if (v.status !== "active") continue;
+  const { data: vendors, error } = await sb
+    .from("vendors")
+    .select("*, profiles!vendors_user_id_fkey(email)")
+    .eq("status", "active");
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const sent: string[] = [];
+
+  for (const row of vendors ?? []) {
+    const v = row as Vendor & { profiles?: { email?: string } | null };
     const view = annotate(v);
     const kind = kindFor(view.daysUntilNotice);
     if (!kind) continue;
 
-    // Don't double-send the same kind for the same vendor on the same day.
-    const alreadySent = db.reminderLog.some(
-      (r) => r.vendorId === v.id && r.kind === kind && r.sentAt.startsWith(todayKey),
-    );
-    if (alreadySent) continue;
+    const { count } = await sb
+      .from("reminder_log")
+      .select("id", { count: "exact", head: true })
+      .eq("vendor_id", v.id)
+      .eq("kind", kind)
+      .gte("sent_at", `${todayKey}T00:00:00Z`)
+      .lte("sent_at", `${todayKey}T23:59:59Z`);
+    if ((count ?? 0) > 0) continue;
 
-    const user = db.users.find((u) => u.id === v.userId);
-    if (!user) continue;
+    const email = v.profiles?.email;
+    if (!email) continue;
 
     await sendReminderEmail({
-      to: user.email,
+      to: email,
       vendorName: v.name,
       daysUntilNotice: view.daysUntilNotice,
       noticeDeadline: view.noticeDeadline,
-      costMonthly: v.costMonthly,
+      costMonthly: Number(v.cost_monthly),
     });
 
-    db.reminderLog.push({
-      id: newId(),
-      vendorId: v.id,
-      kind,
-      sentAt: new Date().toISOString(),
-    });
-    sentToday.push(`${user.email}:${v.name}:${kind}`);
+    await sb.from("reminder_log").insert({ vendor_id: v.id, kind });
+    sent.push(`${email}:${v.name}:${kind}`);
   }
 
-  writeDb(db);
-  return NextResponse.json({ sent: sentToday.length, items: sentToday });
+  return NextResponse.json({ sent: sent.length, items: sent });
 }

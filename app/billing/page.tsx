@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { upgradeAction } from "../actions";
 
-export default function Billing() {
-  const user = currentUser();
+export default async function Billing() {
+  const user = await currentUser();
   if (!user) redirect("/login");
   return (
     <div className="container">
@@ -26,7 +26,7 @@ export default function Billing() {
           <li>Priority support</li>
         </ul>
         {user.plan === "pro" ? (
-          <div className="banner" style={{ background: "rgba(0,212,163,0.12)" }}>
+          <div className="banner ok">
             You&apos;re already on Pro. Thanks!
           </div>
         ) : (

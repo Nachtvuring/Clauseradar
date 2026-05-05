@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { currentUser } from "@/lib/auth";
+import ThemeToggle from "@/components/ThemeToggle";
 
-export default function Landing() {
-  const user = currentUser();
+export default async function Landing() {
+  const user = await currentUser();
   return (
     <>
       <header className="container">
@@ -11,6 +12,7 @@ export default function Landing() {
           <div className="links">
             <a href="#features" className="muted">Features</a>
             <a href="#pricing" className="muted">Pricing</a>
+            <ThemeToggle />
             {user ? (
               <Link href="/dashboard" className="btn btn-primary">Dashboard</Link>
             ) : (
@@ -25,11 +27,11 @@ export default function Landing() {
 
       <main className="container" style={{ padding: "60px 24px 80px" }}>
         <section style={{ maxWidth: 720, margin: "40px 0 80px" }}>
-          <div style={{ fontSize: 13, color: "var(--accent-2)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 14 }}>
+          <div style={{ fontSize: 12, color: "var(--sage)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 18, fontWeight: 600 }}>
             Built for ops &amp; finance teams
           </div>
-          <h1 style={{ fontSize: "clamp(38px, 6vw, 64px)", lineHeight: 1.05, letterSpacing: "-0.02em", margin: "0 0 18px" }}>
-            Stop discovering auto-renewals on the credit-card statement.
+          <h1 style={{ fontSize: "clamp(40px, 6.5vw, 68px)", margin: "0 0 22px" }}>
+            Stop discovering <span className="scribble">auto-renewals</span> on the credit-card statement.
           </h1>
           <p style={{ fontSize: 19, color: "var(--muted)", lineHeight: 1.5, margin: "0 0 32px" }}>
             ClauseRadar tracks every SaaS contract you sign — end dates, notice windows, monthly cost — and emails you 60, 30, and 7 days before each opt-out deadline. So you renew on purpose, not by accident.

@@ -4,16 +4,16 @@ import { currentUser } from "@/lib/auth";
 import { getVendor } from "@/lib/vendors";
 import { deleteVendorAction, updateVendorAction } from "../../actions";
 
-export default function EditVendor({
+export default async function EditVendor({
   params,
   searchParams,
 }: {
   params: { id: string };
   searchParams: { error?: string };
 }) {
-  const user = currentUser();
+  const user = await currentUser();
   if (!user) redirect("/login");
-  const vendor = getVendor(user.id, params.id);
+  const vendor = await getVendor(params.id);
   if (!vendor) notFound();
 
   return (
@@ -31,17 +31,17 @@ export default function EditVendor({
         <div className="row two">
           <div>
             <label className="label" htmlFor="costMonthly">Monthly cost (USD)</label>
-            <input id="costMonthly" name="costMonthly" type="number" min={0} step="0.01" defaultValue={vendor.costMonthly} className="input" />
+            <input id="costMonthly" name="costMonthly" type="number" min={0} step="0.01" defaultValue={Number(vendor.cost_monthly)} className="input" />
           </div>
           <div>
             <label className="label" htmlFor="contractEndDate">Contract end date</label>
-            <input id="contractEndDate" name="contractEndDate" type="date" required defaultValue={vendor.contractEndDate} className="input" />
+            <input id="contractEndDate" name="contractEndDate" type="date" required defaultValue={vendor.contract_end_date} className="input" />
           </div>
         </div>
         <div className="row two">
           <div>
             <label className="label" htmlFor="noticePeriodDays">Notice period (days)</label>
-            <input id="noticePeriodDays" name="noticePeriodDays" type="number" min={0} defaultValue={vendor.noticePeriodDays} className="input" />
+            <input id="noticePeriodDays" name="noticePeriodDays" type="number" min={0} defaultValue={vendor.notice_period_days} className="input" />
           </div>
           <div>
             <label className="label" htmlFor="status">Status</label>
@@ -54,7 +54,7 @@ export default function EditVendor({
         </div>
         <div>
           <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <input name="autoRenews" type="checkbox" defaultChecked={vendor.autoRenews} />
+            <input name="autoRenews" type="checkbox" defaultChecked={vendor.auto_renews} />
             <span>Auto-renews</span>
           </label>
         </div>

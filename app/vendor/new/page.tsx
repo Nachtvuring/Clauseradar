@@ -4,11 +4,12 @@ import { currentUser } from "@/lib/auth";
 import { FREE_LIMIT, listVendors } from "@/lib/vendors";
 import { createVendorAction } from "../../actions";
 
-export default function NewVendor({ searchParams }: { searchParams: { error?: string } }) {
-  const user = currentUser();
+export default async function NewVendor({ searchParams }: { searchParams: { error?: string } }) {
+  const user = await currentUser();
   if (!user) redirect("/login");
-  if (user.plan === "free" && listVendors(user.id).length >= FREE_LIMIT) {
-    redirect("/billing");
+  if (user.plan === "free") {
+    const vendors = await listVendors();
+    if (vendors.length >= FREE_LIMIT) redirect("/billing");
   }
 
   const today = new Date();

@@ -3,12 +3,12 @@ import { redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { signupAction } from "../actions";
 
-export default function SignupPage({
+export default async function SignupPage({
   searchParams,
 }: {
   searchParams: { error?: string };
 }) {
-  if (currentUserId()) redirect("/dashboard");
+  if (await currentUserId()) redirect("/dashboard");
   return (
     <main className="container" style={{ maxWidth: 420, paddingTop: 80 }}>
       <Link href="/" className="muted" style={{ fontSize: 13 }}>← back</Link>
@@ -22,8 +22,8 @@ export default function SignupPage({
         </div>
         <div>
           <label className="label" htmlFor="password">Password</label>
-          <input id="password" name="password" type="password" required minLength={8} className="input" />
-          <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>At least 8 characters.</div>
+          <input id="password" name="password" type="password" required minLength={6} className="input" />
+          <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>At least 6 characters.</div>
         </div>
         <button className="btn btn-primary" type="submit">Create account</button>
         <div className="muted" style={{ fontSize: 13, textAlign: "center" }}>

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { FREE_LIMIT, listVendors, totalMonthlySpend } from "@/lib/vendors";
 import { deleteVendorAction, logoutAction } from "../actions";
+import ThemeToggle from "@/components/ThemeToggle";
 
 function urgencyLabel(u: string) {
   switch (u) {
@@ -19,11 +20,10 @@ function urgencyLabel(u: string) {
   }
 }
 
-export default function Dashboard({ searchParams }: { searchParams: { upgraded?: string } }) {
-  const user = currentUser();
+export default async function Dashboard({ searchParams }: { searchParams: { upgraded?: string } }) {
+  const user = await currentUser();
   if (!user) redirect("/login");
-  const vendors = listVendors(user.id);
-  const spend = totalMonthlySpend(user.id);
+  const [vendors, spend] = await Promise.all([listVendors(), totalMonthlySpend()]);
   const dueSoon = vendors.filter((v) => v.urgency === "urgent" || v.urgency === "overdue");
   const atLimit = user.plan === "free" && vendors.length >= FREE_LIMIT;
 
@@ -33,9 +33,10 @@ export default function Dashboard({ searchParams }: { searchParams: { upgraded?:
         <div className="brand">ClauseRadar</div>
         <div className="links">
           <span className="muted" style={{ fontSize: 13 }}>{user.email}</span>
-          <span className="badge ok" style={{ background: user.plan === "pro" ? "rgba(79,140,255,0.18)" : undefined, color: user.plan === "pro" ? "var(--accent)" : undefined }}>
+          <span className={`badge ${user.plan === "pro" ? "pro" : "free"}`}>
             {user.plan}
           </span>
+          <ThemeToggle />
           {user.plan === "free" && <Link href="/billing" className="btn btn-primary">Upgrade</Link>}
           <form action={logoutAction}>
             <button type="submit" className="btn btn-ghost">Log out</button>
@@ -108,9 +109,9 @@ export default function Dashboard({ searchParams }: { searchParams: { upgraded?:
                   <tr key={v.id}>
                     <td>
                       <Link href={`/vendor/${v.id}`} style={{ fontWeight: 600, color: "var(--text)" }}>{v.name}</Link>
-                      {v.autoRenews && <span className="muted" style={{ fontSize: 12, marginLeft: 8 }}>auto-renews</span>}
+                      {v.auto_renews && <span className="muted" style={{ fontSize: 12, marginLeft: 8 }}>auto-renews</span>}
                     </td>
-                    <td>${v.costMonthly.toFixed(2)}</td>
+                    <td>${Number(v.cost_monthly).toFixed(2)}</td>
                     <td>{v.noticeDeadline}</td>
                     <td>{v.status !== "active" ? "—" : v.daysUntilNotice < 0 ? `${Math.abs(v.daysUntilNotice)}d overdue` : `${v.daysUntilNotice}d`}</td>
                     <td><span className={`badge ${v.urgency}`}>{urgencyLabel(v.urgency)}</span></td>

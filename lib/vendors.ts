@@ -1,6 +1,20 @@
-import { readDb, writeDb, newId, type Vendor } from "./db";
+import { supabaseServer } from "./supabase";
 
+export type VendorStatus = "active" | "cancelled" | "renewed";
 export type Urgency = "ok" | "soon" | "urgent" | "overdue" | "settled";
+
+export type Vendor = {
+  id: string;
+  user_id: string;
+  name: string;
+  cost_monthly: number;
+  contract_end_date: string;
+  notice_period_days: number;
+  auto_renews: boolean;
+  status: VendorStatus;
+  notes: string;
+  created_at: string;
+};
 
 export type VendorView = Vendor & {
   daysUntilRenewal: number;
@@ -9,13 +23,23 @@ export type VendorView = Vendor & {
   urgency: Urgency;
 };
 
+export type VendorInput = {
+  name: string;
+  cost_monthly: number;
+  contract_end_date: string;
+  notice_period_days: number;
+  auto_renews: boolean;
+  status: VendorStatus;
+  notes: string;
+};
+
 export const FREE_LIMIT = 5;
 
 const DAY = 86400 * 1000;
 
 export function annotate(v: Vendor, nowMs = Date.now()): VendorView {
-  const end = new Date(v.contractEndDate + "T00:00:00Z").getTime();
-  const noticeMs = end - v.noticePeriodDays * DAY;
+  const end = new Date(v.contract_end_date + "T00:00:00Z").getTime();
+  const noticeMs = end - v.notice_period_days * DAY;
   const daysUntilRenewal = Math.ceil((end - nowMs) / DAY);
   const daysUntilNotice = Math.ceil((noticeMs - nowMs) / DAY);
   let urgency: Urgency;
@@ -33,72 +57,90 @@ export function annotate(v: Vendor, nowMs = Date.now()): VendorView {
   };
 }
 
-export function listVendors(userId: string): VendorView[] {
-  const db = readDb();
-  return db.vendors
-    .filter((v) => v.userId === userId)
-    .map((v) => annotate(v))
-    .sort((a, b) => {
-      if (a.urgency === "settled" && b.urgency !== "settled") return 1;
-      if (b.urgency === "settled" && a.urgency !== "settled") return -1;
-      return a.daysUntilNotice - b.daysUntilNotice;
-    });
+export async function listVendors(): Promise<VendorView[]> {
+  const sb = supabaseServer();
+  const { data, error } = await sb
+    .from("vendors")
+    .select("*")
+    .order("contract_end_date", { ascending: true });
+  if (error) throw error;
+  const annotated = (data ?? []).map((v) => annotate(v as Vendor));
+  return annotated.sort((a, b) => {
+    if (a.urgency === "settled" && b.urgency !== "settled") return 1;
+    if (b.urgency === "settled" && a.urgency !== "settled") return -1;
+    return a.daysUntilNotice - b.daysUntilNotice;
+  });
 }
 
-export function getVendor(userId: string, vendorId: string): VendorView | null {
-  const db = readDb();
-  const v = db.vendors.find((x) => x.id === vendorId && x.userId === userId);
-  return v ? annotate(v) : null;
+export async function getVendor(vendorId: string): Promise<VendorView | null> {
+  const sb = supabaseServer();
+  const { data, error } = await sb
+    .from("vendors")
+    .select("*")
+    .eq("id", vendorId)
+    .single();
+  if (error || !data) return null;
+  return annotate(data as Vendor);
 }
 
-export type VendorInput = Omit<Vendor, "id" | "userId" | "createdAt">;
-
-export function createVendor(
+export async function createVendor(
   userId: string,
   input: VendorInput,
-): { vendor: Vendor } | { error: string } {
-  const db = readDb();
-  const user = db.users.find((u) => u.id === userId);
-  if (!user) return { error: "User not found" };
-  const userVendors = db.vendors.filter((v) => v.userId === userId);
-  if (user.plan === "free" && userVendors.length >= FREE_LIMIT) {
+): Promise<{ vendor: Vendor } | { error: string }> {
+  if (!input.name.trim()) return { error: "Name is required" };
+  if (!input.contract_end_date) return { error: "Contract end date is required" };
+
+  const sb = supabaseServer();
+
+  const { count } = await sb
+    .from("vendors")
+    .select("id", { count: "exact", head: true });
+
+  const { data: profile } = await sb
+    .from("profiles")
+    .select("plan")
+    .eq("id", userId)
+    .single();
+
+  const plan = (profile?.plan as "free" | "pro") ?? "free";
+  if (plan === "free" && (count ?? 0) >= FREE_LIMIT) {
     return { error: "Free plan limit reached. Upgrade to add more vendors." };
   }
-  if (!input.name.trim()) return { error: "Name is required" };
-  if (!input.contractEndDate) return { error: "Contract end date is required" };
-  const v: Vendor = {
-    id: newId(),
-    userId,
-    createdAt: new Date().toISOString(),
-    ...input,
-    name: input.name.trim(),
-  };
-  db.vendors.push(v);
-  writeDb(db);
-  return { vendor: v };
+
+  const { data, error } = await sb
+    .from("vendors")
+    .insert({ ...input, name: input.name.trim(), user_id: userId })
+    .select()
+    .single();
+  if (error) return { error: error.message };
+  return { vendor: data as Vendor };
 }
 
-export function updateVendor(
-  userId: string,
+export async function updateVendor(
   vendorId: string,
   patch: Partial<VendorInput>,
-): { vendor: Vendor } | { error: string } {
-  const db = readDb();
-  const idx = db.vendors.findIndex((v) => v.id === vendorId && v.userId === userId);
-  if (idx < 0) return { error: "Not found" };
-  db.vendors[idx] = { ...db.vendors[idx], ...patch };
-  writeDb(db);
-  return { vendor: db.vendors[idx] };
+): Promise<{ vendor: Vendor } | { error: string }> {
+  const sb = supabaseServer();
+  const { data, error } = await sb
+    .from("vendors")
+    .update(patch)
+    .eq("id", vendorId)
+    .select()
+    .single();
+  if (error || !data) return { error: error?.message ?? "Not found" };
+  return { vendor: data as Vendor };
 }
 
-export function deleteVendor(userId: string, vendorId: string) {
-  const db = readDb();
-  db.vendors = db.vendors.filter((v) => !(v.id === vendorId && v.userId === userId));
-  writeDb(db);
+export async function deleteVendor(vendorId: string): Promise<void> {
+  const sb = supabaseServer();
+  await sb.from("vendors").delete().eq("id", vendorId);
 }
 
-export function totalMonthlySpend(userId: string): number {
-  return listVendors(userId)
-    .filter((v) => v.status === "active")
-    .reduce((sum, v) => sum + v.costMonthly, 0);
+export async function totalMonthlySpend(): Promise<number> {
+  const sb = supabaseServer();
+  const { data } = await sb
+    .from("vendors")
+    .select("cost_monthly,status")
+    .eq("status", "active");
+  return (data ?? []).reduce((sum, v) => sum + Number(v.cost_monthly ?? 0), 0);
 }
